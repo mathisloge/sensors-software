@@ -34,6 +34,7 @@ const char WEB_ROOT_PAGE_CONTENT[] PROGMEM = "<a href='/values'>{t}</a><br/>\
 <a href='/config'>{conf}</a><br/>\
 <a href='/removeConfig'>{conf_delete}</a><br/>\
 <a href='/reset'>{restart}</a><br/>\
+<a href='/sdcard'>SD-Card</a><br/>\
 <table style='width:100%;'>\
 <tr><td style='width:33%;'><a href='/debug?level=0'>Debug null</a></td>\
 <td style='width:33%;'><a href='/debug?level=1'>Debug Error</a></td>\
@@ -57,6 +58,10 @@ const char WEB_REMOVE_CONFIG_CONTENT[] PROGMEM = "<h3>{t}</h3>\
 
 const char WEB_RESET_CONTENT[] PROGMEM = "<h3>{t}</h3>\
 <table><tr><td><form method='POST' action'/reset'><input type='submit' class='submit_green' name='submit' value='{b}'/></form></td><td><a href='/'>{c}</a></td></tr></table>\
+";
+
+const char WEB_SDCARD_CONTENT[] PROGMEM = "<h3>SDCard</h3>\
+<table><tr><td><form method='POST' action='/sdcard'><input type='submit' class='submit_green' name='submit' value='Alle Dateien löschen'/></form></td><td><a href='/'>{c}</a></td></tr></table>\
 ";
 
 const char CFG_LOGO_SVG[] PROGMEM = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\

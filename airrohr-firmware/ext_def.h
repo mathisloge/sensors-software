@@ -5,6 +5,7 @@
 // WLAN Konfig
 #define WLANSSID "Freifunk-disabled"
 #define WLANPWD ""
+#define OFFLINE 1
 
 // BasicAuth Konfig
 #define WWW_USERNAME "admin"
@@ -12,8 +13,8 @@
 #define WWW_BASICAUTH_ENABLED 0
 
 // Wohin gehen die Daten?
-#define SEND2DUSTI 1
-#define SEND2MADAVI 1
+#define SEND2DUSTI 0
+#define SEND2MADAVI 0
 #define SEND2SENSEMAP 0
 #define SEND2MQTT 0
 #define SEND2INFLUX 0
@@ -45,7 +46,7 @@
 #define PWD_INFLUX "info"
 
 // DHT22, Sensor Temperatur und Luftfeuchte
-#define DHT_READ 1
+#define DHT_READ 0
 #define DHT_TYPE DHT22
 #define DHT_API_PIN 7
 #if defined(ESP8266)
@@ -113,7 +114,7 @@
 #endif
 
 // BME280, Luftdruck-Sensor
-#define BME280_READ 0
+#define BME280_READ 1
 #define BME280_API_PIN 11
 #if defined(ESP8266)
 #define BME280_PIN_SCL D4
@@ -129,27 +130,31 @@
 
 
 // GPS, bevorzugt Neo-6M
-#define GPS_READ 0
+#define GPS_READ 1
 #define GPS_API_PIN 9
 #if defined(ESP8266)
-#define GPS_PIN_RX D5
-#define GPS_PIN_TX D6
+#define GPS_PIN_RX 3
+#define GPS_PIN_TX 1
 #endif
 
+//SD angeschlossen?
+#define HAS_SD 1
+#define SD_CS_PIN D8  // Chip select line for SD card
+
 // Automatische Firmware-Updates über WLAN
-#define AUTO_UPDATE 1
+#define AUTO_UPDATE 0
 
 // OLED Display SSD1306 angeschlossen?
 #define HAS_DISPLAY 0
 
 // LCD Display LCD1602 angeschlossen?
-#define HAS_LCD1602 0
+#define HAS_LCD1602 1
 
 // LCD Display LCD1602 (0x27) angeschlossen?
 #define HAS_LCD1602_27 0
 
 // Wieviele Informationen sollen über die serielle Schnittstelle ausgegeben werden?
-#define DEBUG 3
+#define DEBUG 5
 
 // Definition der Debuglevel
 #define DEBUG_ERROR 1
@@ -162,19 +167,19 @@
 // Required for Serial on Zero based boards
 #define Serial SERIAL_PORT_USBVIRTUAL
 //GPIO Pins
-#define D0 0
-#define D1 1
-#define D2 2
-#define D3 3
-#define D4 4
-#define D5 5
-#define D6 6
-#define D7 7
-#define D8 8
-#define D9 9
-#define D10 10
-#define D11 11
-#define D12 12
+#define D0 16
+#define D1 5
+#define D2 4
+#define D3 0
+#define D4 2
+#define D5 14
+#define D6 12
+#define D7 13
+#define D8 15
+#define DRX 3
+#define DTX 1
+#define SD3 10
+#define SD2 9
 // LoRa module
 #define RFM69_CS 8
 #define RFM69_RST 4
