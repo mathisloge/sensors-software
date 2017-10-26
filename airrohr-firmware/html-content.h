@@ -61,7 +61,7 @@ const char WEB_RESET_CONTENT[] PROGMEM = "<h3>{t}</h3>\
 ";
 
 const char WEB_SDCARD_CONTENT[] PROGMEM = "<h3>SDCard</h3>\
-<table><tr><td><form method='POST' action='/sdcard'><input type='submit' class='submit_green' name='submit' value='Alle Dateien löschen'/></form></td><td><a href='/'>{c}</a></td></tr></table>\
+<table><tr><td><form method='POST' action='/sdcard/delete'><input type='submit' class='submit_green' name='submit' value='Alle Dateien löschen'/></form></td><td><form method='POST' action='/sdcard/download'><input type='submit' class='submit_green' name='submit' value='Alle Dateien downloaden'/></form></td><td><a href='/'>{c}</a></td></tr></table>\
 ";
 
 const char CFG_LOGO_SVG[] PROGMEM = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\

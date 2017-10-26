@@ -93,8 +93,8 @@
 #if defined(ARDUINO_SAMD_ZERO)
 #include <RHReliableDatagram.h>
 #include <RH_RF69.h>
-#include <SPI.h>
 #endif
+#include <SPI.h>
 #include <SD.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
@@ -1563,39 +1563,14 @@ void webserver_sdcard() {
   String page_content = "";
   String message_string = F("<h3>{v}.</h3>");
   last_page_load = millis();
-  debug_out(F("output remove config page..."), DEBUG_MIN_INFO, 1);
+  debug_out(F("output sdcard page..."), DEBUG_MIN_INFO, 1);
   page_content += make_header(FPSTR("SD Config"));
 
-  if (server.method() == HTTP_GET) {
-    page_content += FPSTR(WEB_SDCARD_CONTENT);
-    page_content.replace("{c}", FPSTR(INTL_ABBRECHEN));
-  } else {
-    File root = SD.open("/");
-    int numTabs = 0;
-    while (true) {
-      File entry =  root.openNextFile();
-      if (! entry) {
-        // no more files
-        break;
-      }
-      for (uint8_t i = 0; i < numTabs; i++) {
-        Serial.print('\t');
-      }
-      Serial.print(entry.name());
-      if (entry.isDirectory()) {
-        Serial.println("/");
-      } else {
-        // files have sizes, directories do not
-        Serial.print("\t\t");
-        Serial.println(entry.name());
-      }
-      entry.close();
-    }
-  }
+  page_content += FPSTR(WEB_SDCARD_CONTENT);
+  page_content.replace("{c}", FPSTR(INTL_ABBRECHEN));
   page_content += make_footer();
   server.send(200, FPSTR(TXT_CONTENT_TYPE_TEXT_HTML), page_content);
 }
-
 /*****************************************************************
   /* Webserver data.json                                           *
   /*****************************************************************/
@@ -1645,6 +1620,87 @@ void webserver_not_found() {
   server.send(404, FPSTR(TXT_CONTENT_TYPE_TEXT_PLAIN), F("Not found."));
 }
 
+
+void webserver_sdcard_delete() {
+  File  root = SD.open("/");
+  int numTabs = 0;
+  while (true) {
+
+    File entry =  root.openNextFile();
+    if (! entry) {
+      // no more files
+      break;
+    }
+    for (uint8_t i = 0; i < numTabs; i++) {
+      Serial.print('\t');
+    }
+    Serial.print(entry.name());
+    if (entry.isDirectory()) {
+      Serial.println("/");
+      //printDirectory(entry, numTabs + 1);
+    } else {
+      // files have sizes, directories do not
+      Serial.print("\t\t");
+      Serial.println(entry.size(), DEC);
+    }
+    entry.close();
+  }
+}
+
+void webserver_sdcard_download() {
+  webserver_request_auth();
+
+  String page_content = "";
+  String message_string = F("<h3>{v}.</h3>");
+  last_page_load = millis();
+  debug_out(F("output sdcard page..."), DEBUG_MIN_INFO, 1);
+  page_content += make_header(FPSTR("SD-Card Download"));
+  page_content += "<h2>TEST</h2>";
+  unsigned int filecounter = 0;
+  bool stopAndDelete = false;
+  while(true){
+    String filename = "AR_"+String(filecounter)+".csv";
+    File download = SD.open(filename);
+    if(download){
+      if(download.size() == 0){
+        stopAndDelete = true;
+      }
+      else {
+        page_content += "<a href='/download?file="+filename+"'>"+filename+"</a>";
+      }
+      download.close();
+      if(stopAndDelete){
+        SD.remove(filename);
+        break;
+      }
+    }
+    else{
+      Serial.println("Cant open "+ filename);
+      break;
+    }   
+    filecounter++;
+  }
+  page_content.replace("{c}", FPSTR(INTL_ABBRECHEN));
+  page_content += make_footer();
+  server.send(200, FPSTR(TXT_CONTENT_TYPE_TEXT_HTML), page_content);
+  //String filename = "AR_0.csv";
+  /*if (!SD.exists(filename)) { funktioniert bisher nicht
+    debug_out(F("Cant find file..."), DEBUG_MIN_INFO, 1);
+    return;
+    }*/
+    /*
+  File downFile = SD.open(filename);
+  if (downFile) {
+    server.streamFile(downFile, "text/csv");
+  }
+  else {
+    display_debug(F("Cant download File"));
+    delay(200);
+    yield();
+  }*/
+  delay(200);
+  yield();
+}
 /*****************************************************************
   /* Webserver setup                                               *
   /*****************************************************************/
@@ -1662,6 +1718,8 @@ void setup_webserver() {
   server.on("/removeConfig", webserver_removeConfig);
   server.on("/reset", webserver_reset);
   server.on("/sdcard", webserver_sdcard);
+  server.on("/delete", webserver_sdcard_delete);
+  server.on("/download", webserver_sdcard_download);
   server.on("/data.json", webserver_data_json);
   server.on("/images", webserver_images);
   server.onNotFound(webserver_not_found);
@@ -2091,6 +2149,7 @@ void send_csv(const String& data) {
 /*****************************************************************
   /* send data to sd card                                          *
   /*****************************************************************/
+
 void send_to_sdcard() {
   //initSDCard();
   if (HAS_SD != has_sdcard) {
@@ -2101,112 +2160,61 @@ void send_to_sdcard() {
   unsigned int now (millis() / 1000);
   unsigned int day(now / 86400);
   String filename = "AR_" + String(day) + ".csv";
-
-  File currFile = SD.open("AR_1" + String(day) + ".csv", FILE_WRITE);
+  bool fileExists = true;
+  /*if (!SD.exists(filename)) { //geht bisher nicht
+    Serial.println("example.txt not exists.");
+    fileExists = false;
+    }*/
+  File currFile = SD.open(filename, FILE_WRITE);
+  display_debug(F("Write to SDCARD"));
   if (currFile) {
-    currFile.println("test");
-  }else {
-    // if the file didn't open, print an error:
-    Serial.println("Cant write in " + filename);
-  }
-
-
-}
-void test() {/*
-  int value_count = 0;
-  String t_value = "";
-  String h_value = "";
-  String p_value = "";
-  String t_sensor = "";
-  String h_sensor = "";
-  String p_sensor = "";
-  String pm10_value = "";
-  String pm25_value = "";
-  String pm10_sensor = "";
-  String pm25_sensor = "";
-  if (dht_read) {
-    t_value = last_value_DHT_T; t_sensor = "DHT22";
-    h_value = last_value_DHT_H; h_sensor = "DHT22";
+    if (!fileExists) {
+      currFile.println("Timestamp (ms);ppd1;ppd2;sdsp1;sdsp2;pmsp0;pmsp1;pmsp2;dht_t;dht_H;htu21d_t;htu21d_H;bmp_t;bmp_p;bmp280_t;bmp280_p;bme280_t;bme280_h;bme280_p;ds18b20_t;lat;lng;alt;date;time");
     }
-    if (bmp_read) {
-    t_value = last_value_BMP_T; t_sensor = "BMP180";
-    p_value = last_value_BMP_P; p_sensor = "BMP180";
-    }
-    if (bmp280_read) {
-    t_value = last_value_BMP280_T; t_sensor = "BMP280";
-    p_value = last_value_BMP280_P; p_sensor = "BMP280";
-    }
-    if (bme280_read) {
-    t_value = last_value_BME280_T; t_sensor = "BME280";
-    h_value = last_value_BME280_H; h_sensor = "BME280";
-    p_value = last_value_BME280_P; p_sensor = "BME280";
-    }
-    if (ppd_read) {
-    pm10_value = last_value_PPD_P1; pm10_sensor = "PPD42NS";
-    pm25_value = last_value_PPD_P2; pm25_sensor = "PPD42NS";
-    }
-    if (pms24_read || pms32_read) {
-    pm10_value = last_value_PMS_P1; pm10_sensor = "PMSx003";
-    pm25_value = last_value_PMS_P2; pm25_sensor = "PMSx003";
-    }
-    if (sds_read) {
-    pm10_value = last_value_SDS_P1; pm10_sensor = "SDS011";
-    pm25_value = last_value_SDS_P2; pm25_sensor = "SDS011";
-    }
-    if (pm10_value == "") {
-    pm10_value = "-";
-    }
-    if (pm25_value == "") {
-    pm25_value = "-";
-    }
-    if (t_value == "") {
-    t_value = "-";
-    }
-    if (h_value == "") {
-    h_value = "-";
-    }
-    if (p_value == "") {
-    p_value = "-";
-    }
-    if (SD.exists("AR_" + String(day) + ".csv")) {
-    debug_out(F("file exists"), DEBUG_MIN_INFO, 1);
-    fileExists = true;
-    }
-  debug_out(F("CSV SD Output"), DEBUG_MIN_INFO, 1);
-  unsigned int now (millis() / 1000);
-  unsigned int day(now / 86400);
-  String filename = "AR_" + String(day) + ".csv";
-  bool fileExists = false;
-  File currFile = SD.open("AR_" + String(day) + ".csv", FILE_WRITE);
-  if (currFile) {
-    String t = "43678;15.98;14.70;23.88;56.08;101351.14;;;;;;114069;231;199266;31";
-    currFile.println("43678;15.98;14.70;23.88;56.08;101351.14;;;;;;114069;231;199266;31");
-    currFile.println(t);
     String csv = "" + String(now) + ";";
-    display.drawString(0, 10 * (value_count++), "Temp:" + t_value + "  Hum.:" + h_value);
-    if (ppd_read) {
-      display.drawString(0, 10 * (value_count++), "PPD P1: " + value_PPD_P1);
-      display.drawString(0, 10 * (value_count++), "PPD P2: " + value_PPD_P2);
-    }
-    if (sds_read) {
-      display.drawString(0, 10 * (value_count++), "SDS P1: " + value_SDS_P1);
-      display.drawString(0, 10 * (value_count++), "SDS P2: " + value_SDS_P2);
-    }
-    if (gps_read) {
-      if (gps.location.isValid()) {
-        display.drawString(0, 10 * (value_count++), "lat: " + String(gps.location.lat(), 6));
-        display.drawString(0, 10 * (value_count++), "long: " + String(gps.location.lng(), 6));
-      }
-      display.drawString(0, 10 * (value_count++), "satellites: " + String(gps.satellites.value()));
-    }
-  }
-  else {
+    csv += last_value_PPD_P2 + ";";
+    csv += last_value_PPD_P2 + ";";
+    csv += last_value_PPD_P2 + ";";
+    csv += last_value_PPD_P2 + ";";
+    csv += last_value_PPD_P1 + ";";
+    csv += last_value_PPD_P2 + ";";
+    csv += last_value_SDS_P1 + ";";
+    csv += last_value_SDS_P2 + ";";
+    csv += last_value_PMS_P0 + ";";
+    csv += last_value_PMS_P1 + ";";
+    csv += last_value_PMS_P2 + ";";
+    csv += last_value_DHT_T + ";";
+    csv += last_value_DHT_H + ";";
+    csv += last_value_HTU21D_T + ";";
+    csv += last_value_HTU21D_H + ";";
+    csv += last_value_BMP_T + ";";
+    csv += last_value_BMP_P + ";";
+    csv += last_value_BMP280_T + ";";
+    csv += last_value_BMP280_P + ";";
+    csv += last_value_BME280_T + ";";
+    csv += last_value_BME280_H + ";";
+    csv += last_value_BME280_P + ";";
+    csv += last_value_DS18B20_T + ";";
+    csv += last_gps_lat + ";";
+    csv += last_gps_lng + ";";
+    csv += last_gps_alt + ";";
+    csv += last_gps_date + ";";
+    csv += last_gps_time;
+    currFile.println(csv);
+    Serial.println(csv);
+  } else {
     // if the file didn't open, print an error:
-    Serial.println("Cant write in " + filename);
+    Serial.println("Cant write in ");
   }
+  //currFile.close();
+  Serial.print(last_value_BME280_T + ";");
+  Serial.print(last_value_BME280_H + ";");
+  Serial.print(last_value_BME280_P + ";");
+  Serial.println("");
   currFile.close();
+  display_debug(F("Write finish"));
+  delay(100);
   yield();
-  */
 }
 
 /*****************************************************************
@@ -2809,7 +2817,7 @@ String sensorGPS() {
       if (gps.location.isValid()) {
         last_gps_lat = String(gps.location.lat(), 6);
         last_gps_lng = String(gps.location.lng(), 6);
-        display_debug("Lat/Lng: " + String(last_gps_lat) + "," + String(last_gps_lng));
+        debug_out("Lat/Lng: " + String(last_gps_lat) + "," + String(last_gps_lng), DEBUG_MAX_INFO, 1);
       } else {
         debug_out(F("Lat/Lng INVALID"), DEBUG_MAX_INFO, 1);
       }
@@ -2868,7 +2876,8 @@ String sensorGPS() {
     debug_out("Date: " + last_gps_date, DEBUG_MIN_INFO, 1);
     debug_out("Time " + last_gps_time, DEBUG_MIN_INFO, 1);
     debug_out("------", DEBUG_MIN_INFO, 1);
-    display_debug("Lat/Lng: " + String(last_gps_lat) + "," + String(last_gps_lng));
+    debug_out("Lat/Lng: " + String(last_gps_lat) + "," + String(last_gps_lng), DEBUG_MIN_INFO, 1);
+    //display_debug("Lat/Lng: " + String(last_gps_lat) + "," + String(last_gps_lng));
     s += Value2Json(F("GPS_lat"), last_gps_lat);
     s += Value2Json(F("GPS_lon"), last_gps_lng);
     s += Value2Json(F("GPS_height"), last_gps_alt);
@@ -3027,14 +3036,14 @@ void display_values(const String& value_DHT_T, const String& value_DHT_H, const 
   if (has_lcd1602_27) {
     lcd_27.clear();
     lcd_27.setCursor(0, 0);
-    lcd_27.print("PM: " + (value_SDS_P1 != "" ? value_SDS_P1 : "-") + " " + (value_SDS_P2 != "" ? value_SDS_P2 : "-"));
+    lcd_27.print("PM10/2.5: " + (value_SDS_P1 != "" ? value_SDS_P1 : "-") + " " + (value_SDS_P2 != "" ? value_SDS_P2 : "-"));
     lcd_27.setCursor(0, 1);
     lcd_27.print("T/H:" + t_value + char(223) + "C " + h_value + "%");
   }
   if (has_lcd1602) {
     lcd_3f.clear();
     lcd_3f.setCursor(0, 0);
-    lcd_3f.print("PM: " + (value_SDS_P1 != "" ? value_SDS_P1 : "-") + " " + (value_SDS_P2 != "" ? value_SDS_P2 : "-"));
+    lcd_3f.print("PM10/2.5: " + (value_SDS_P1 != "" ? value_SDS_P1 : "-") + " " + (value_SDS_P2 != "" ? value_SDS_P2 : "-"));
     lcd_3f.setCursor(0, 1);
     lcd_3f.print("T/H:" + t_value + char(223) + "C " + h_value + "%");
   }
@@ -3101,8 +3110,6 @@ bool initBME280(char addr) {
   /*****************************************************************/
 
 bool initSDCard() {
-  pinMode(SD_CS_PIN, OUTPUT); // workaroud
-  digitalWrite(SD_CS_PIN, HIGH); // workaroud
   if (!SD.begin(SD_CS_PIN)) {
     Serial.println("Card failed, or not present");
     has_sdcard = false;
@@ -3134,7 +3141,6 @@ void setup() {
   copyExtDef();
   display_debug(F("Reading config from SPIFFS"));
   readConfig();
-  send_to_sdcard();
   setup_webserver();
   connectWifi();            // Start ConnectWifi
   debug_out(F("Check Restart"), DEBUG_MIN_INFO, 1);
@@ -3152,10 +3158,13 @@ void setup() {
   serialSDS.begin(9600);
   serialGPS.begin(9600);
   ds18b20.begin();
-  pinMode(PPD_PIN_PM1, INPUT_PULLUP);	// Listen at the designated PIN
-  pinMode(PPD_PIN_PM2, INPUT_PULLUP);	// Listen at the designated PIN
-  dht.begin();	// Start DHT
-  htu21d.begin(); // Start HTU21D
+  /*
+     Wenn die Zeilen drin sind, kann nicht mehr auf der SD Karte gespeichert werden.
+    pinMode(PPD_PIN_PM1, INPUT_PULLUP);	// Listen at the designated PIN
+    pinMode(PPD_PIN_PM2, INPUT_PULLUP);	// Listen at the designated PIN
+    dht.begin();	// Start DHT
+    htu21d.begin(); // Start HTU21D
+  */
   delay(10);
 #if defined(ESP8266)
   debug_out(F("\nChipId: "), DEBUG_MIN_INFO, 0);
@@ -3530,9 +3539,7 @@ void loop() {
       will_check_for_update = true;
     }
 
-    if (has_display || has_lcd1602 || has_lcd1602_27) {
-      display_values(last_value_DHT_T, last_value_DHT_H, last_value_BMP_T, last_value_BMP_P, last_value_BMP280_T, last_value_BMP280_P, last_value_BME280_T, last_value_BME280_H, last_value_BME280_P, last_value_PPD_P1, last_value_PPD_P2, last_value_SDS_P1, last_value_SDS_P2);
-    }
+
 
     if (send2madavi) {
       debug_out(F("## Sending to madavi.de: "), DEBUG_MIN_INFO, 1);
@@ -3601,7 +3608,7 @@ void loop() {
 
 
 
-    if (WiFi.status() != WL_CONNECTED) {  // reconnect if connection lost
+    if (WiFi.status() != WL_CONNECTED && !is_offline) {  // reconnect if connection lost
       int retry_count = 0;
       debug_out(F("Connection lost, reconnecting "), DEBUG_MIN_INFO, 0);
       WiFi.reconnect();
@@ -3611,6 +3618,10 @@ void loop() {
         retry_count++;
       }
       debug_out("", DEBUG_MIN_INFO, 1);
+    }
+
+    if (has_display || has_lcd1602 || has_lcd1602_27) {
+      display_values(last_value_DHT_T, last_value_DHT_H, last_value_BMP_T, last_value_BMP_P, last_value_BMP280_T, last_value_BMP280_P, last_value_BME280_T, last_value_BME280_H, last_value_BME280_P, last_value_PPD_P1, last_value_PPD_P2, last_value_SDS_P1, last_value_SDS_P2);
     }
 
     // Resetting for next sampling
